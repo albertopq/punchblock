@@ -4,7 +4,6 @@ module Punchblock
       class Connection
         class AGI
 
-          PROTOCOL = ::Punchblock::Protocol::Asterisk
           RESPONSE_PREFIX = "200 result=" unless defined? RESPONSE_PREFIX
 
           # These are the status messages that asterisk will issue after a dial command is executed.
@@ -22,13 +21,13 @@ module Punchblock
           # INVALIDARGS: Error parsing Dial command arguments (added for Asterisk 1.4.1, SVN r53135-53136)
           #
           # @see http://www.voip-info.org/wiki/index.php?page=Asterisk+variable+DIALSTATUS Asterisk Variable DIALSTATUS
-          DIAL_STATUSES   = Hash.new(:unknown).merge(:answer      => :answered, #:doc:
-                                                     :congestion  => :congested,
-                                                     :busy        => :busy,
-                                                     :cancel      => :cancelled,
-                                                     :noanswer    => :unanswered,
-                                                     :cancelled   => :cancelled,
-                                                     :chanunavail => :channel_unavailable) unless defined? DIAL_STATUSES
+          DIAL_STATUSES = Hash.new(:unknown).merge(:answer      => :answered, #:doc:
+                                                   :congestion  => :congested,
+                                                   :busy        => :busy,
+                                                   :cancel      => :cancelled,
+                                                   :noanswer    => :unanswered,
+                                                   :cancelled   => :cancelled,
+                                                   :chanunavail => :channel_unavailable) unless defined? DIAL_STATUSES
 
           DYNAMIC_FEATURE_EXTENSIONS = {
             :attended_transfer => lambda do |options|
@@ -108,13 +107,10 @@ module Punchblock
             end
           end
 
-
-
-
           protected
 
             # wait_for_digits waits for the input of digits based on the number of milliseconds
-            def wait_for_digit(timeout=-1)
+            def wait_for_digit(timeout = -1)
               timeout *= 1_000 if timeout != -1
               result = result_digit_from response("WAIT FOR DIGIT", timeout.to_i)
               (result == 0.chr) ? nil : result
@@ -150,7 +146,6 @@ module Punchblock
                   ''
                 when Proc
                   raise NotImplementedError, "Coming in the future, you can do :confirm => my_context."
-
                 when Hash
                   options = defaults.merge confirm_argument_value
                   if((confirm_argument_value.keys - defaults.keys).any?)
@@ -241,10 +236,9 @@ module Punchblock
             # timeout with pressed digits:    200 result=<digits> (timeout)
             # timeout without pressed digits: 200 result= (timeout)
             # @see http://www.voip-info.org/wiki/view/get+data AGI Get Data
-           def input_timed_out?(result)
+            def input_timed_out?(result)
               result.starts_with?(response_prefix) && result.ends_with?('(timeout)')
             end
-
 
             module MenuDigitResponse
               def timed_out?
@@ -253,7 +247,6 @@ module Punchblock
             end
 
             module SpeechEngines
-
               class InvalidSpeechEngine < StandardError; end
 
               class << self
@@ -279,11 +272,10 @@ module Punchblock
                 def escape(text)
                   "%p" % text
                 end
-
               end
-            end
-        end
-      end
-    end
-  end
-end
+            end # SpeechEngines
+        end # AGI
+      end # Connection
+    end # Asterisk
+  end # Protocol
+end # Punchblock
