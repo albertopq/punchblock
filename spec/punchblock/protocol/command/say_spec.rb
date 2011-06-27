@@ -36,7 +36,7 @@ module Punchblock
           before do
             command.command_id = 'abc123'
             command.call_id = '123abc'
-            command.connection = Connection::XMPP.new :username => '123', :password => '123'
+            command.connection = mock
           end
 
           describe '#pause_action' do
@@ -55,7 +55,7 @@ module Punchblock
               end
 
               it "should send its command properly" do
-                Connection::XMPP.any_instance.expects(:write).with('123abc', command.pause_action, 'abc123').returns true
+                command.connection.expects(:write).with('123abc', command.pause_action, 'abc123').returns true
                 command.expects :paused!
                 command.pause!
               end
@@ -99,7 +99,7 @@ module Punchblock
               end
 
               it "should send its command properly" do
-                Connection::XMPP.any_instance.expects(:write).with('123abc', command.resume_action, 'abc123').returns true
+                command.connection.expects(:write).with('123abc', command.resume_action, 'abc123').returns true
                 command.expects :resumed!
                 command.resume!
               end
@@ -143,7 +143,7 @@ module Punchblock
               end
 
               it "should send its command properly" do
-                Connection::XMPP.any_instance.expects(:write).with('123abc', command.stop_action, 'abc123')
+                command.connection.expects(:write).with('123abc', command.stop_action, 'abc123')
                 command.stop!
               end
             end
