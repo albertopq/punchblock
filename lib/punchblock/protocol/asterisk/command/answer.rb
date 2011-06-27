@@ -1,5 +1,5 @@
 module Punchblock
-  module Protocol
+  class Protocol
     module Asterisk
       module Command
 

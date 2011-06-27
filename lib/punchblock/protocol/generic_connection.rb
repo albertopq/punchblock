@@ -1,5 +1,5 @@
 module Punchblock
-  module Protocol
+  class Protocol
     class GenericConnection
       attr_accessor :event_queue
 

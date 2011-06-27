@@ -1,5 +1,5 @@
 module Punchblock
-  module Protocol
+  class Protocol
     class Asterisk
       module Command
         extend ActiveSupport::Autoload

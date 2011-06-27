@@ -7,6 +7,8 @@ require 'pry'
 require 'logger'
 require 'optparse'
 
+include Punchblock
+
 Thread.abort_on_exception = true
 
 options = { :username => 'usera@127.0.0.1', :password => '1', :wire_log_file => 'log/ozone-wire.log', :transport_log_file => 'log/ozone-transport.log' }
@@ -33,7 +35,7 @@ option_parser = OptionParser.new do |opts|
     exit
   end
   opts.on_tail("-v", "--version", "Show version") do
-    puts Punchblock::VERSION
+    puts VERSION
     exit
   end
 end
@@ -52,7 +54,7 @@ options[:transport_logger] = Logger.new options.delete(:transport_log_file)
 options[:transport_logger].level = Logger::DEBUG
 options[:transport_logger].debug "Starting up..."
 
-protocol = Punchblock::Protocol::Ozone.new options
+protocol = Protocol.new options
 
 protocol_thread = protocol.run
 
@@ -73,14 +75,14 @@ Thread.new do
     end
     puts "#{event.class} event for call: #{event.call_id}"
     case event
-    when Punchblock::Call
+    when Call
       raise "Duplicate call ID for #{event.call_id}" if CALL_QUEUES.has_key?(event.call_id)
       CALL_QUEUES[event.call_id] = Queue.new
       CALL_QUEUES[event.call_id].push event
       run_call protocol, event
-    when protocol.class::Event::Info
+    when Protocol::Event::Info
       INFO_EVENT_QUEUE.push event
-    when protocol.class::Event::Answered, protocol.class::Event::Complete, protocol.class::Event::End, protocol.class::Event::Ringing
+    when Protocol::Event::Answered, Protocol::Event::Complete, Protocol::Event::End, Protocol::Event::Ringing
       CALL_QUEUES[event.call_id].push event
     else
       puts "Unknown event: #{event.inspect}"
@@ -96,13 +98,13 @@ def run_call(protocol, call)
     raise "Unknown call #{call.call_id}" unless CALL_QUEUES.has_key?(call.call_id)
     queue = CALL_QUEUES[call.call_id]
     call = queue.pop
-    dsl = Punchblock::DSL.new protocol, call, queue
+    dsl = DSL.new protocol, call, queue
 
     puts "Incoming call to #{call.to} from #{call.headers[:from]} #{call}"
     dsl.pry
 
     # Clean up the queue.
-    CALL_QUEUES[call.call_id] = nil
+    # CALL_QUEUES[call.call_id] = nil
   end
 end
 

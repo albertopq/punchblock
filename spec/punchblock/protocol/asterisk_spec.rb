@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 module Punchblock
-  module Protocol
+  class Protocol
     class Asterisk
 
     end # Asterisk

@@ -1,5 +1,5 @@
 module Punchblock
-  module Protocol
+  class Protocol
     ##
     # This exception may be raised if a transport error is detected.
     class ProtocolError < StandardError
