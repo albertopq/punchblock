@@ -15,7 +15,6 @@ module Punchblock
     autoload :Command
     autoload :Connection
     autoload :Event
-    autoload :GenericConnection
     autoload :HasHeaders
     autoload :Header
     autoload :OzoneNode
@@ -29,7 +28,7 @@ module Punchblock
     # See Connection for details of options
     #
     def initialize(options = {})
-      @connection = Connection.new options
+      @connection = Connection.create options
     end
 
     def method_missing(method_name, *args)

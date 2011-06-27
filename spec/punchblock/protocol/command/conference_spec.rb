@@ -92,7 +92,7 @@ module Punchblock
           before do
             conference.command_id = 'abc123'
             conference.call_id = '123abc'
-            conference.connection = Connection.new :username => '123', :password => '123'
+            conference.connection = Connection::XMPP.new :username => '123', :password => '123'
           end
 
           describe '#mute_action' do
@@ -111,7 +111,7 @@ module Punchblock
               end
 
               it "should send its command properly" do
-                Connection.any_instance.expects(:write).with('123abc', conference.mute_action, 'abc123').returns true
+                Connection::XMPP.any_instance.expects(:write).with('123abc', conference.mute_action, 'abc123').returns true
                 conference.expects :muted!
                 conference.mute!
               end
@@ -160,7 +160,7 @@ module Punchblock
               end
 
               it "should send its command properly" do
-                Connection.any_instance.expects(:write).with('123abc', conference.unmute_action, 'abc123').returns true
+                Connection::XMPP.any_instance.expects(:write).with('123abc', conference.unmute_action, 'abc123').returns true
                 conference.expects :unmuted!
                 conference.unmute!
               end
@@ -204,7 +204,7 @@ module Punchblock
               end
 
               it "should send its command properly" do
-                Connection.any_instance.expects(:write).with('123abc', conference.stop_action, 'abc123')
+                Connection::XMPP.any_instance.expects(:write).with('123abc', conference.stop_action, 'abc123')
                 conference.stop!
               end
             end
@@ -232,7 +232,7 @@ module Punchblock
               end
 
               it "should send its command properly" do
-                Connection.any_instance.expects(:write).with('123abc', conference.kick_action(:message => 'bye!'), 'abc123')
+                Connection::XMPP.any_instance.expects(:write).with('123abc', conference.kick_action(:message => 'bye!'), 'abc123')
                 conference.kick! :message => 'bye!'
               end
             end

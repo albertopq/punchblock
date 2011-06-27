@@ -81,7 +81,7 @@ module Punchblock
           before do
             command.command_id = 'abc123'
             command.call_id = '123abc'
-            command.connection = Connection.new :username => '123', :password => '123'
+            command.connection = Connection::XMPP.new :username => '123', :password => '123'
           end
 
           describe '#stop_action' do
@@ -100,7 +100,7 @@ module Punchblock
               end
 
               it "should send its command properly" do
-                Connection.any_instance.expects(:write).with('123abc', command.stop_action, 'abc123')
+                Connection::XMPP.any_instance.expects(:write).with('123abc', command.stop_action, 'abc123')
                 command.stop!
               end
             end
