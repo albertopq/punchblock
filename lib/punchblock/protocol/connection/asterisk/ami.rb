@@ -1,7 +1,7 @@
 module Punchblock
   class Protocol
-    module Asterisk
-      class Connection
+    module Connection
+      class Asterisk
         ##
         # This class abstracts a connection to the Asterisk Manager Interface.
         # Its purpose is, first and foremost, to make the protocol consistent.
@@ -87,29 +87,33 @@ module Punchblock
           # @param [Hash] options Available options are :host, :port, :username, :password, and :events
           #
           def initialize(options = {})
-            options = parse_options options
-            @host           = options[:host]
-            @username       = options[:username]
-            @password       = options[:password]
-            @port           = options[:port]
+            # options = parse_options options
+            # @host           = options[:host]
+            # @username       = options[:username]
+            # @password       = options[:password]
+            # @port           = options[:port]
+            #
+            # @sent_messages = {}
+            # @sent_messages_lock = Mutex.new
+            #
+            # @actions_lexer = DelegatingAsteriskManagerInterfaceLexer.new self,
+            #     :message_received => :action_message_received,
+            #     :error_received   => :action_error_received
+            #
+            # @write_queue = Queue.new
+            #
+            # if @events
+            #   @events_lexer = DelegatingAsteriskManagerInterfaceLexer.new self,
+            #       :message_received => :event_message_received,
+            #       :error_received   => :event_error_received
+            # end
+          end
 
-            @sent_messages = {}
-            @sent_messages_lock = Mutex.new
+          def run
 
-            @actions_lexer = DelegatingAsteriskManagerInterfaceLexer.new self,
-                :message_received => :action_message_received,
-                :error_received   => :action_error_received
-
-            @write_queue = Queue.new
-
-            if @events
-              @events_lexer = DelegatingAsteriskManagerInterfaceLexer.new self,
-                  :message_received => :event_message_received,
-                  :error_received   => :event_error_received
-            end
           end
         end # AMI
-      end # Connection
-    end # Asterisk
+      end # Asterisk
+    end # Connection
   end # Protocol
 end # Punchblock
