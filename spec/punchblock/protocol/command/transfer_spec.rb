@@ -29,124 +29,124 @@ module Punchblock
         end
 
         it_should_behave_like 'command_headers'
-      end
 
-      describe "actions" do
-        let(:command) { Transfer.new :to => 'tel:+14045551212', :from => 'tel:+14155551212' }
+        describe "actions" do
+          let(:command) { Transfer.new :to => 'tel:+14045551212', :from => 'tel:+14155551212' }
 
-        before do
-          command.command_id = 'abc123'
-          command.call_id = '123abc'
-          command.connection = mock
-        end
-
-        describe '#stop_action' do
-          subject { command.stop_action }
-
-          its(:to_xml) { should == '<stop xmlns="urn:xmpp:ozone:transfer:1"/>' }
-          its(:command_id) { should == 'abc123' }
-          its(:call_id) { should == '123abc' }
-        end
-
-        describe '#stop!' do
-          describe "when the command is executing" do
-            before do
-              command.request!
-              command.execute!
-            end
-
-            it "should send its command properly" do
-              command.connection.expects(:write).with('123abc', command.stop_action, 'abc123')
-              command.stop!
-            end
+          before do
+            command.command_id = 'abc123'
+            command.call_id = '123abc'
+            command.connection = mock
           end
 
-          describe "when the command is not executing" do
-            it "should raise an error" do
-              lambda { command.stop! }.should raise_error(InvalidActionError, "Cannot stop a Transfer that is not executing.")
+          describe '#stop_action' do
+            subject { command.stop_action }
+
+            its(:to_xml) { should == '<stop xmlns="urn:xmpp:ozone:transfer:1"/>' }
+            its(:command_id) { should == 'abc123' }
+            its(:call_id) { should == '123abc' }
+          end
+
+          describe '#stop!' do
+            describe "when the command is executing" do
+              before do
+                command.request!
+                command.execute!
+              end
+
+              it "should send its command properly" do
+                command.connection.expects(:write).with('123abc', command.stop_action, 'abc123')
+                command.stop!
+              end
+            end
+
+            describe "when the command is not executing" do
+              it "should raise an error" do
+                lambda { command.stop! }.should raise_error(InvalidActionError, "Cannot stop a Transfer that is not executing.")
+              end
             end
           end
         end
-      end
 
-      describe Transfer::Complete::Success do
-        let :stanza do
-          <<-MESSAGE
-<complete xmlns='urn:xmpp:ozone:ext:1'>
-  <success xmlns='urn:xmpp:ozone:transfer:complete:1' />
-</complete>
-          MESSAGE
+        describe Transfer::Complete::Success do
+          let :stanza do
+            <<-MESSAGE
+  <complete xmlns='urn:xmpp:ozone:ext:1'>
+    <success xmlns='urn:xmpp:ozone:transfer:complete:1' />
+  </complete>
+            MESSAGE
+          end
+
+          subject { OzoneNode.import(parse_stanza(stanza).root).reason }
+
+          it { should be_instance_of Transfer::Complete::Success }
+
+          its(:name) { should == :success }
         end
 
-        subject { OzoneNode.import(parse_stanza(stanza).root).reason }
+        describe Transfer::Complete::Timeout do
+          let :stanza do
+            <<-MESSAGE
+  <complete xmlns='urn:xmpp:ozone:ext:1'>
+    <timeout xmlns='urn:xmpp:ozone:transfer:complete:1' />
+  </complete>
+            MESSAGE
+          end
 
-        it { should be_instance_of Transfer::Complete::Success }
+          subject { OzoneNode.import(parse_stanza(stanza).root).reason }
 
-        its(:name) { should == :success }
-      end
+          it { should be_instance_of Transfer::Complete::Timeout }
 
-      describe Transfer::Complete::Timeout do
-        let :stanza do
-          <<-MESSAGE
-<complete xmlns='urn:xmpp:ozone:ext:1'>
-  <timeout xmlns='urn:xmpp:ozone:transfer:complete:1' />
-</complete>
-          MESSAGE
+          its(:name) { should == :timeout }
         end
 
-        subject { OzoneNode.import(parse_stanza(stanza).root).reason }
+        describe Transfer::Complete::Terminator do
+          let :stanza do
+            <<-MESSAGE
+  <complete xmlns='urn:xmpp:ozone:ext:1'>
+    <terminator xmlns='urn:xmpp:ozone:transfer:complete:1' />
+  </complete>
+            MESSAGE
+          end
 
-        it { should be_instance_of Transfer::Complete::Timeout }
+          subject { OzoneNode.import(parse_stanza(stanza).root).reason }
 
-        its(:name) { should == :timeout }
-      end
+          it { should be_instance_of Transfer::Complete::Terminator }
 
-      describe Transfer::Complete::Terminator do
-        let :stanza do
-          <<-MESSAGE
-<complete xmlns='urn:xmpp:ozone:ext:1'>
-  <terminator xmlns='urn:xmpp:ozone:transfer:complete:1' />
-</complete>
-          MESSAGE
+          its(:name) { should == :terminator }
         end
 
-        subject { OzoneNode.import(parse_stanza(stanza).root).reason }
+        describe Transfer::Complete::Busy do
+          let :stanza do
+            <<-MESSAGE
+  <complete xmlns='urn:xmpp:ozone:ext:1'>
+    <busy xmlns='urn:xmpp:ozone:transfer:complete:1' />
+  </complete>
+            MESSAGE
+          end
 
-        it { should be_instance_of Transfer::Complete::Terminator }
+          subject { OzoneNode.import(parse_stanza(stanza).root).reason }
 
-        its(:name) { should == :terminator }
-      end
+          it { should be_instance_of Transfer::Complete::Busy }
 
-      describe Transfer::Complete::Busy do
-        let :stanza do
-          <<-MESSAGE
-<complete xmlns='urn:xmpp:ozone:ext:1'>
-  <busy xmlns='urn:xmpp:ozone:transfer:complete:1' />
-</complete>
-          MESSAGE
+          its(:name) { should == :busy }
         end
 
-        subject { OzoneNode.import(parse_stanza(stanza).root).reason }
+        describe Transfer::Complete::Reject do
+          let :stanza do
+            <<-MESSAGE
+  <complete xmlns='urn:xmpp:ozone:ext:1'>
+    <reject xmlns='urn:xmpp:ozone:transfer:complete:1' />
+  </complete>
+            MESSAGE
+          end
 
-        it { should be_instance_of Transfer::Complete::Busy }
+          subject { OzoneNode.import(parse_stanza(stanza).root).reason }
 
-        its(:name) { should == :busy }
-      end
+          it { should be_instance_of Transfer::Complete::Reject }
 
-      describe Transfer::Complete::Reject do
-        let :stanza do
-          <<-MESSAGE
-<complete xmlns='urn:xmpp:ozone:ext:1'>
-  <reject xmlns='urn:xmpp:ozone:transfer:complete:1' />
-</complete>
-          MESSAGE
+          its(:name) { should == :reject }
         end
-
-        subject { OzoneNode.import(parse_stanza(stanza).root).reason }
-
-        it { should be_instance_of Transfer::Complete::Reject }
-
-        its(:name) { should == :reject }
       end
     end
   end # Protocol
