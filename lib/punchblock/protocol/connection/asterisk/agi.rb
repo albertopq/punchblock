@@ -14,7 +14,7 @@ module Punchblock
             Thread.new do
               EventMachine.run do
                 EventMachine.start_server @listening_addr, @listening_port, CallServer, @connection
-                @event_queue.push :CONNECTED
+                @connection.event_queue.push :CONNECTED
                 @connection.logger.info "Asterisk AGI Server listening on #{@listening_addr}:#{@listening_addr}" if @connection.logger
               end
             end

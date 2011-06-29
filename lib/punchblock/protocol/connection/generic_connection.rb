@@ -17,7 +17,7 @@ module Punchblock
         end
 
         def connected
-          'CONNECTED'
+          :CONNECTED
         end
       end
     end
