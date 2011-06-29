@@ -4,8 +4,8 @@
 # THIS IS IMPERMANENT AND WILL DISAPPEAR
 module Punchblock
   class DSL
-    def initialize(protocol, call, queue) # :nodoc:
-      @protocol, @call, @queue = protocol, call, queue
+    def initialize(protocol, call_id, queue) # :nodoc:
+      @protocol, @call_id, @queue = protocol, call_id, queue
     end
 
     def accept # :nodoc:
@@ -36,7 +36,7 @@ module Punchblock
     end
 
     def write(msg) # :nodoc:
-      @protocol.write @call, msg
+      @protocol.write msg, @call_id
     end
   end
 end

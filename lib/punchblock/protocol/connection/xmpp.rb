@@ -54,8 +54,8 @@ module Punchblock
         #
         # @return true
         #
-        def write(call_id, cmd, command_id = nil)
-          queue = async_write call_id, cmd, command_id
+        def write(cmd, call_id, command_id = nil)
+          queue = async_write cmd, call_id, command_id
           begin
             Timeout::timeout(3) { queue.pop }
           ensure
@@ -65,8 +65,8 @@ module Punchblock
 
         ##
         # @return [Queue] Pop this queue to determine result of command execution. Will be true or an exception
-        def async_write(call_id, cmd, command_id = nil)
-          iq = prep_command_for_execution call_id, cmd, command_id
+        def async_write(cmd, call_id, command_id = nil)
+          iq = prep_command_for_execution cmd, call_id, command_id
 
           Queue.new.tap do |queue|
             @command_callbacks[iq.id] = lambda do |result|
@@ -89,9 +89,9 @@ module Punchblock
           end
         end
 
-        def prep_command_for_execution(call_id, cmd, command_id = nil)
+        def prep_command_for_execution(cmd, call_id, command_id = nil)
           cmd.connection = self
-          call_id = call_id.call_id if call_id.is_a? Call
+          call_id = call_id.call_id unless call_id.is_a? String
           cmd.call_id = call_id
           jid = cmd.is_a?(Command::Dial) ? @ozone_domain : "#{call_id}@#{@callmap[call_id]}"
           jid << "/#{command_id}" if command_id
@@ -156,7 +156,7 @@ module Punchblock
           event = p.event
           event.connection = self
           event.source.add_event event if event.source
-          @event_queue.push event.is_a?(Event::Offer) ? Punchblock::Call.new(p.call_id, p.to, event.headers_hash) : event
+          @event_queue.push event
         end
 
         def handle_iq_result(iq)

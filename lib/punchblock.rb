@@ -5,7 +5,6 @@ require 'active_support/core_ext/numeric/time'
 module Punchblock
   extend ActiveSupport::Autoload
 
-  autoload :Call
   autoload :DSL
   autoload :Protocol
 

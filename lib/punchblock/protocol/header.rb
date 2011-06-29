@@ -20,13 +20,13 @@ module Punchblock
       # The Header's name
       # @return [Symbol]
       def name
-        read_attr(:name).gsub('-', '_').to_sym
+        read_attr(:name).gsub('-', '_').downcase.to_sym
       end
 
       # Set the Header's name
       # @param [Symbol] name the new name for the header
       def name=(name)
-        write_attr :name, name.to_s.gsub('_', '-')
+        write_attr :name, name.to_s.gsub('_', '-').downcase
       end
 
       # The Header's value

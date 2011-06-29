@@ -21,7 +21,6 @@ module Punchblock
         its(:event_queue) { should be_a Queue }
 
         it "looking up original command by command ID" do
-          call = Punchblock::Call.new '9f00061', 'sip:whatever@127.0.0.1', {}
           say = <<-MSG
   <say xmlns='urn:xmpp:ozone:say:1' voice='allison'>
     <audio url='http://acme.com/greeting.mp3'>
@@ -41,7 +40,7 @@ module Punchblock
           connection.expects(:create_iq).returns iq
 
           write_thread = Thread.new do
-            connection.write call, say
+            connection.write say, '9f00061'
           end
 
           result = import_stanza <<-MSG
@@ -116,7 +115,7 @@ module Punchblock
             describe "from an offer" do
               subject { connection.event_queue.first }
 
-              it { should be_instance_of Call }
+              it { should be_instance_of Event::Offer }
               its(:call_id) { should == '9f00061' }
 
               it "should populate the call map with the domain for the call ID" do

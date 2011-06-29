@@ -78,11 +78,11 @@ Thread.new do
     end
     puts "#{event.class} event for call: #{event.call_id}"
     case event
-    when Call
+    when Protocol::Event::Offer
       raise "Duplicate call ID for #{event.call_id}" if CALL_QUEUES.has_key?(event.call_id)
       CALL_QUEUES[event.call_id] = Queue.new
       CALL_QUEUES[event.call_id].push event
-      run_call protocol, event
+      run_call protocol, event.call_id
     when Protocol::Event::Info
       INFO_EVENT_QUEUE.push event
     when Protocol::Event::Answered, Protocol::Event::Complete, Protocol::Event::End, Protocol::Event::Ringing
@@ -94,16 +94,16 @@ Thread.new do
   end
 end
 
-def run_call(protocol, call)
+def run_call(protocol, call_id)
   ### CALL THREAD
   # One thread is spun up to handle each call.
   Thread.new do
-    raise "Unknown call #{call.call_id}" unless CALL_QUEUES.has_key?(call.call_id)
-    queue = CALL_QUEUES[call.call_id]
-    call = queue.pop
-    dsl = DSL.new protocol, call, queue
+    raise StandardError, "Unknown call #{call_id}" unless CALL_QUEUES.has_key?(call_id)
+    queue = CALL_QUEUES[call_id]
+    offer = queue.pop
+    dsl = DSL.new protocol, offer, queue
 
-    puts "Incoming call to #{call.to} from #{call.headers[:from]} #{call}"
+    puts "Incoming call to #{offer.headers_hash[:to]} from #{offer.headers_hash[:from]} #{offer}"
     dsl.pry
 
     # Clean up the queue.

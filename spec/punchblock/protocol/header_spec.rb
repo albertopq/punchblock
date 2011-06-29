@@ -28,6 +28,17 @@ module Punchblock
         h.to_xml.should == '<header name="boo-bah" value="foo"/>'
       end
 
+      it "downcases the name attribute when reading" do
+        n = parse_stanza "<header name='BoO' value='foo' />"
+        h = Header.new n.root
+        h.name.should == :boo
+      end
+
+      it "downcases the name attribute when writing" do
+        h = Header.new :BoOBaH, 'foo'
+        h.to_xml.should == '<header name="boobah" value="foo"/>'
+      end
+
       it 'has a value attribute' do
         n = Header.new :boo, 'en'
         n.value.should == 'en'

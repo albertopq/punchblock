@@ -2,7 +2,7 @@ module Punchblock
   class Protocol
     module Connection
       class Asterisk
-        class Call < Punchblock::Call
+        class Call
           module Variables
             module Coercions
               COERCION_ORDER = %w{
