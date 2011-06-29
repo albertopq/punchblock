@@ -1,3 +1,5 @@
+require 'eventmachine'
+
 module Punchblock
   class Protocol
     module Connection
@@ -6,6 +8,7 @@ module Punchblock
 
         autoload :AMI
         autoload :AGI
+        autoload :Call
 
         DEFAULT_OPTIONS = {
           :agi => {

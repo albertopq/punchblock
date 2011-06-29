@@ -20,187 +20,28 @@ module Punchblock
             end
           end
 
-          class CallServer < EM::Protocols::LineAndTextProtocol
+          class CallServer < EventMachine::Protocols::LineAndTextProtocol
             def initialize(connection)
               @connection = connection
+              # @call = Call.new
               @variables = []
+              @variable_lines = []
               @variables_finished = false
             end
 
             def receive_data(data)
               @connection.wire_logger.debug "AGI STREAM IN: #{data}"
-              lines = data.split "\n"
-              p lines
-              unless @variables_finished
-                @variables = Variables::Parser.parse lines
-                @variables_finished = true
-              end
-              p @variables
-            end
-
-            module Variables
-
-              module Coercions
-                COERCION_ORDER = %w{
-                  remove_agi_prefixes_from_keys_and_strip_whitespace
-                  coerce_keys_into_symbols
-                  coerce_extension_into_phone_number_object
-                  coerce_numerical_values_to_numerics
-                  replace_unknown_values_with_nil
-                  replace_yes_no_answers_with_booleans
-                  coerce_request_into_uri_object
-                  decompose_uri_query_into_hash
-                  override_variables_with_query_params
-                  remove_dashes_from_context_name
-                  coerce_type_of_number_into_symbol
-                }
-
-                class << self
-                  def remove_agi_prefixes_from_keys_and_strip_whitespace(variables)
-                    variables.inject({}) do |new_variables,(key,value)|
-                      new_variables.tap do
-                        stripped_name = key.kind_of?(String) ? key[/^(agi_)?(.+)$/,2] : key
-                        new_variables[stripped_name] = value.kind_of?(String) ? value.strip : value
-                      end
-                    end
-                  end
-
-                  def coerce_keys_into_symbols(variables)
-                    variables.inject({}) do |new_variables,(key,value)|
-                      new_variables.tap do
-                        new_variables[key.to_sym] = value
-                      end
-                    end
-                  end
-
-                  def coerce_extension_into_phone_number_object(variables)
-                    variables# .tap do
-                    #                       variables[:extension] = Adhearsion::VoIP::DSL::PhoneNumber.new(variables[:extension])
-                    #                     end
-                  end
-
-                  def coerce_numerical_values_to_numerics(variables)
-                    variables.inject({}) do |vars,(key,value)|
-                      vars.tap do
-                        is_numeric = value =~ /^-?\d+(?:(\.)\d+)?$/
-                        is_float   = $1
-                        vars[key] = if is_numeric
-                          # if Adhearsion::VoIP::DSL::NumericalString.starts_with_leading_zero?(value)
-                          #   Adhearsion::VoIP::DSL::NumericalString.new(value)
-                          # else
-                            if is_float
-                              if key == :uniqueid
-                                value
-                              else
-                                value.to_f
-                              end
-                            else
-                              value.to_i
-                            end
-                          # end
-                        else
-                          value
-                        end
-                      end
-                    end
-                  end
-
-                  def replace_unknown_values_with_nil(variables)
-                    variables.each do |key,value|
-                      variables[key] = nil if value == 'unknown'
-                    end
-                  end
-
-                  def replace_yes_no_answers_with_booleans(variables)
-                    variables.each do |key,value|
-                      case value
-                        when 'yes' then variables[key] = true
-                        when 'no'  then variables[key] = false
-                      end
-                    end
-                  end
-
-                  def coerce_request_into_uri_object(variables)
-                    if variables[:request]
-                      variables[:request] = URI.parse(variables[:request]) unless variables[:request].kind_of? URI
-                    end
-                    variables
-                  end
-
-                  def coerce_type_of_number_into_symbol(variables)
-                    variables# .tap do
-                    #                       variables[:type_of_calling_number] = Adhearsion::VoIP::Constants::Q931_TYPE_OF_NUMBER[variables.delete(:callington).to_i]
-                    #                     end
-                  end
-
-                  def decompose_uri_query_into_hash(variables)
-                    variables.tap do
-                      if variables[:request] && variables[:request].query
-                        variables[:query] = variables[:request].query.split('&').inject({}) do |query_string_parameters, key_value_pair|
-                          parameter_name, parameter_value = *key_value_pair.match(/(.+)=(.*)/).captures
-                          query_string_parameters[parameter_name] = parameter_value
-                          query_string_parameters
-                        end
-                      else
-                        variables[:query] = {}
-                      end
-                    end
-                  end
-
-                  def override_variables_with_query_params(variables)
-                    variables.tap do
-                      if variables[:query]
-                        variables[:query].each do |key, value|
-                          variables[key.to_sym] = value
-                        end
-                      end
-                    end
-                  end
-
-                  def remove_dashes_from_context_name(variables)
-                    variables.tap { variables[:context].gsub! '-', '_' if variables[:context] }
+              data.each_line do |l|
+                l.chomp!
+                unless @variables_finished
+                  @variables_finished = true if l.empty?
+                  if @variables_finished && @variables.empty?
+                    Call::Variables::Parser.parse(@variable_lines).variables
+                  else
+                    @variable_lines << l
                   end
                 end
-              end
-
-              class Parser
-                class << self
-                  def parse(*args, &block)
-                    new(*args, &block).tap { |parser| parser.parse }
-                  end
-
-                  def coerce_variables(variables)
-                    Coercions::COERCION_ORDER.inject variables do |tmp_variables, coercing_method_name|
-                      Coercions.send coercing_method_name, tmp_variables
-                    end
-                  end
-
-                  def separate_line_into_key_value_pair(line)
-                    line.match(/^([^:]+):(?:\s?(.+)|$)/).captures
-                  end
-                end
-
-                attr_reader :variables, :lines
-
-                def initialize(lines)
-                  @lines = lines
-                end
-
-                def parse
-                  initialize_variables_as_hash_from_lines
-                  @variables = self.class.coerce_variables variables
-                end
-
-                private
-
-                  def initialize_variables_as_hash_from_lines
-                    @variables = lines.inject({}) do |new_variables,line|
-                      new_variables.tap do
-                        key, value = self.class.separate_line_into_key_value_pair line
-                        new_variables[key] = value
-                      end
-                    end
-                  end
+                p @variables
               end
             end
           end
