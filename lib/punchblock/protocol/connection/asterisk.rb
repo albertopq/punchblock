@@ -55,6 +55,20 @@ module Punchblock
           @agi.run
         end
 
+        def write(cmd, call_id, command_id = nil)
+          @logger.debug "Writing cmd #{cmd} for call ID #{call_id} and command ID #{command_id}"
+          call_server_for_id(call_id).send_data ozone_to_agi(cmd)
+        end
+
+        def ozone_to_agi(cmd)
+          case cmd
+          when Command::Accept
+            'EXEC Ringing'
+          when Command::Answer
+            'ANSWER'
+          end
+        end
+
         def notify_new_call(call_id, agi_server)
           @callmap[call_id] = agi_server
         end

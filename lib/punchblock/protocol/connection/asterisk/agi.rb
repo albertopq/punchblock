@@ -20,14 +20,14 @@ module Punchblock
             end
           end
 
-          class CallServer < EventMachine::Connection#Protocols::LineAndTextProtocol
+          class CallServer < EventMachine::Protocols::LineAndTextProtocol
             attr_accessor :connection, :event_queue
 
-            delegate :wire_logger, :to => :connection, :allow_nil => true, :prefix => :connection
+            delegate :wire_logger, :event_queue, :to => :connection, :allow_nil => true, :prefix => :connection
 
             def initialize(connection)
               @connection = connection
-              @event_queue = Queue.new
+              # @event_queue = Queue.new
               @variable_lines = []
             end
 
@@ -40,13 +40,18 @@ module Punchblock
               end
             end
 
+            def send_data(data)
+              connection_wire_logger.debug "AGI STREAM OUT: #{data}" if connection_wire_logger
+              super "#{data}\n"
+            end
+
             def receive_variables(data)
               data.each_line do |l|
                 l.chomp!
                 @variables_finished = true if l.empty?
                 if @variables_finished
                   offer = create_offer Variables::Parser.parse(@variable_lines).variables
-                  event_queue.push offer
+                  connection_event_queue.push offer
                   connection.notify_new_call offer.call_id, self
                 else
                   buffer_variable_line l

@@ -100,9 +100,9 @@ def run_call(protocol, call_id)
     raise StandardError, "Unknown call #{call_id}" unless CALL_QUEUES.has_key?(call_id)
     queue = CALL_QUEUES[call_id]
     offer = queue.pop
-    dsl = DSL.new protocol, offer, queue
+    dsl = DSL.new protocol, call_id, queue
 
-    puts "Incoming call to #{offer.headers_hash[:to]} from #{offer.headers_hash[:from]} #{offer}"
+    puts "Incoming call to #{offer.to} from #{offer.from} #{offer}"
     dsl.pry
 
     # Clean up the queue.

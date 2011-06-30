@@ -8,7 +8,7 @@ module Punchblock
           class AGI
             describe CallServer do
               describe "creating an offer from a new call" do
-                let(:connection) { stub :notify_new_call => true, :wire_logger => stub_everything }
+                let(:connection) { stub :notify_new_call => true, :wire_logger => stub_everything, :event_queue => Queue.new }
                 let(:server) { CallServer.new(mock, connection) }
 
                 before do
@@ -17,7 +17,7 @@ module Punchblock
                   server.receive_data "foo: bar\nme:you\n\n"
                 end
 
-                subject { server.event_queue.pop true }
+                subject { connection.event_queue.pop true }
 
                 it { should be_a Event::Offer }
                 its(:call_id) { should == 'abc123' }
