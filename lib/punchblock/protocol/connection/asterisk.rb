@@ -8,7 +8,6 @@ module Punchblock
 
         autoload :AMI
         autoload :AGI
-        autoload :Call
 
         DEFAULT_OPTIONS = {
           :agi => {
@@ -18,8 +17,10 @@ module Punchblock
           :ami => {
             :host => '::1',
             :port => 5038,
-          },
+          }
         }
+
+        attr_accessor :agi, :ami
 
         ##
         # Initialize the required connection attributes
@@ -36,13 +37,14 @@ module Punchblock
           super
           options[:ami] = DEFAULT_OPTIONS[:ami].merge options[:ami] || {}
           options[:agi] = DEFAULT_OPTIONS[:agi].merge options[:agi] || {}
-          raise ArgumentError, "You must supply configuration for Asterisk AMI" unless options.has_key? :ami
           raise ArgumentError, "You must supply a username for Asterisk AMI" unless options[:ami].has_key? :username
           raise ArgumentError, "You must supply a password for Asterisk AMI" unless options[:ami].has_key? :password
           @ami = AMI.new options[:ami].merge(:connection => self)
           @agi = AGI.new options[:agi].merge(:connection => self)
 
           @wire_logger = options.delete(:wire_logger) if options.has_key?(:wire_logger)
+
+          @callmap = {} # This hash maps call IDs to AGI servers
         end
 
         ##
@@ -51,6 +53,14 @@ module Punchblock
         def run
           @ami.run
           @agi.run
+        end
+
+        def notify_new_call(call_id, agi_server)
+          @callmap[call_id] = agi_server
+        end
+
+        def call_server_for_id(call_id)
+          @callmap[call_id]
         end
       end
     end

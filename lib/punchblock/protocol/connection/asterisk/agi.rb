@@ -3,7 +3,7 @@ module Punchblock
     module Connection
       class Asterisk
         class AGI
-          attr_accessor :event_queue
+          attr_accessor :connection, :event_queue
 
           def initialize(options = {})
             @listening_addr, @listening_port, @connection = options.values_at :listening_addr, :listening_port, :connection
@@ -20,30 +20,149 @@ module Punchblock
             end
           end
 
-          class CallServer < EventMachine::Protocols::LineAndTextProtocol
+          class CallServer < EventMachine::Connection#Protocols::LineAndTextProtocol
+            attr_accessor :connection, :event_queue
+
+            delegate :wire_logger, :to => :connection, :allow_nil => true, :prefix => :connection
+
             def initialize(connection)
               @connection = connection
-              # @call = Call.new
-              @variables = []
+              @event_queue = Queue.new
               @variable_lines = []
-              @variables_finished = false
             end
 
             def receive_data(data)
-              @connection.wire_logger.debug "AGI STREAM IN: #{data}"
-              data.each_line do |l|
-                l.chomp!
-                unless @variables_finished
-                  @variables_finished = true if l.empty?
-                  if @variables_finished && @variables.empty?
-                    Call::Variables::Parser.parse(@variable_lines).variables
-                  else
-                    @variable_lines << l
-                  end
-                end
-                p @variables
+              connection_wire_logger.debug "AGI STREAM IN: #{data}" if connection_wire_logger
+              if @variables_finished
+
+              else
+                receive_variables data
               end
             end
+
+            def receive_variables(data)
+              data.each_line do |l|
+                l.chomp!
+                @variables_finished = true if l.empty?
+                if @variables_finished
+                  offer = create_offer Variables::Parser.parse(@variable_lines).variables
+                  event_queue.push offer
+                  connection.notify_new_call offer.call_id, self
+                else
+                  buffer_variable_line l
+                end
+              end
+            end
+
+            def create_offer(variables)
+              Event::Offer.new.tap do |offer|
+                offer.headers = variables
+                offer.call_id = variables[:uniqueid]
+                offer.to = variables[:dnid]
+                offer.from = variables[:callerid]
+              end
+            end
+
+            def buffer_variable_line(line)
+              @variable_lines << line
+            end
+
+            module Variables
+              module Coercions
+                COERCION_ORDER = %w{
+                  remove_agi_prefixes_from_keys_and_strip_whitespace
+                  coerce_keys_into_symbols
+                  decompose_uri_query_into_hash
+                  override_variables_with_query_params
+                  remove_dashes_from_context_name
+                }
+
+                class << self
+                  def remove_agi_prefixes_from_keys_and_strip_whitespace(variables)
+                    variables.inject({}) do |new_variables,(key,value)|
+                      new_variables.tap do
+                        stripped_name = key.kind_of?(String) ? key[/^(agi_)?(.+)$/,2] : key
+                        new_variables[stripped_name] = value.kind_of?(String) ? value.strip : value
+                      end
+                    end
+                  end
+
+                  def coerce_keys_into_symbols(variables)
+                    variables.inject({}) do |new_variables,(key,value)|
+                      new_variables.tap do
+                        new_variables[key.to_sym] = value
+                      end
+                    end
+                  end
+
+                  def decompose_uri_query_into_hash(variables)
+                    variables.tap do
+                      request = URI.parse variables[:request]
+                      if request && request.query
+                        request.query.split('&').each do |key_value_pair|
+                          parameter_name, parameter_value = *key_value_pair.match(/(.+)=(.*)/).captures
+                          variables[:"#{parameter_name}"] = parameter_value
+                        end
+                      end
+                    end
+                  end
+
+                  def override_variables_with_query_params(variables)
+                    variables.tap do
+                      if variables[:query]
+                        variables[:query].each do |key, value|
+                          variables[key.to_sym] = value
+                        end
+                      end
+                    end
+                  end
+
+                  def remove_dashes_from_context_name(variables)
+                    variables.tap { variables[:context].gsub! '-', '_' if variables[:context] }
+                  end
+                end
+              end # Coercions
+
+              class Parser
+                class << self
+                  def parse(*args, &block)
+                    new(*args, &block).tap { |parser| parser.parse }
+                  end
+
+                  def coerce_variables(variables)
+                    Coercions::COERCION_ORDER.inject variables do |tmp_variables, coercing_method_name|
+                      Coercions.send coercing_method_name, tmp_variables
+                    end
+                  end
+
+                  def separate_line_into_key_value_pair(line)
+                    line.match(/^([^:]+):(?:\s?(.+)|$)/).captures
+                  end
+                end
+
+                attr_reader :variables, :lines
+
+                def initialize(lines = [])
+                  @lines = lines
+                end
+
+                def parse
+                  initialize_variables_as_hash_from_lines
+                  @variables = self.class.coerce_variables variables
+                end
+
+                private
+
+                  def initialize_variables_as_hash_from_lines
+                    @variables = lines.inject({}) do |new_variables,line|
+                      new_variables.tap do
+                        key, value = self.class.separate_line_into_key_value_pair line
+                        new_variables[key] = value || ''
+                      end
+                    end
+                  end
+              end # Parser
+            end # Variables
           end
 
           # RESPONSE_PREFIX = "200 result=" unless defined? RESPONSE_PREFIX

@@ -90,7 +90,6 @@ Thread.new do
     else
       puts "Unknown event: #{event.inspect}"
     end
-
   end
 end
 

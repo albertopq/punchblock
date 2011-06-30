@@ -11,6 +11,8 @@ module Punchblock
         # designed to be a building block on which to build higher-level
         # abstractions of the Asterisk Manager Interface.
         class AMI
+          attr_accessor :connection
+
           extend ActiveSupport::Autoload
 
           autoload :AMILexer
@@ -87,6 +89,7 @@ module Punchblock
           # @param [Hash] options Available options are :host, :port, :username, :password, and :events
           #
           def initialize(options = {})
+            @connection = options[:connection]
             # options = parse_options options
             # @host           = options[:host]
             # @username       = options[:username]
